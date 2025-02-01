@@ -198,3 +198,16 @@ logs/app-*.log
 
 # But keep examples
 !.env.example
+
+# Documentation
+docs/docs/pages/api-reference/
+docs/docs/pages/_meta.json
+docs/docs/pages/index.mdx
+docs/docs/pages/globals.md
+docs/docs/pages/README.md
+docs/docs/pages/Chains.md
+docs/docs/pages/Processors.md
+
+# Keep these files
+!docs/docs/pages/getting-started.mdx
+!docs/docs/pages/index.mdx.template

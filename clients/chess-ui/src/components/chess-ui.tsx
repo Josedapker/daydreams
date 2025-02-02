@@ -100,45 +100,47 @@ export function ChessUI() {
 
   const handleCommand = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cmd = command.trim().toLowerCase();
-    if (!cmd) return;
+    const cmdOriginal = command.trim();
+    const cmdLower = cmdOriginal.toLowerCase();
+    if (!cmdOriginal) return;
 
-    setHistory(prev => [...prev, `> ${cmd}`]);
+    setHistory(prev => [...prev, `> ${cmdOriginal}`]);
     setCommand('');
 
-    if (cmd === 'quit') {
+    if (cmdLower === 'quit') {
       setHistory(prev => [...prev, 'Game ended.']);
       return;
     }
 
-    if (cmd === 'chat') {
+    if (cmdLower === 'chat') {
       ws?.send(JSON.stringify({ type: 'chat' }));
       return;
     }
 
-    if (cmd === 'analyze') {
+    if (cmdLower === 'analyze') {
       ws?.send(JSON.stringify({ type: 'analyze', position: game.fen() }));
       return;
     }
 
     try {
-      // Validate move format
+      // Validate move format with improved regex that better handles knight moves
       const movePattern = /^([NBRQK])?([a-h])?([1-8])?x?([a-h][1-8])(=[NBRQ])?[+#]?$/;
-      if (!movePattern.test(cmd) && !cmd.toLowerCase().includes('o-o')) {
+      if (!movePattern.test(cmdOriginal) && !cmdLower.includes('o-o')) {
         setHistory(prev => [...prev, 'Invalid move format. Please use standard algebraic notation (e.g., e4, Nf3, O-O).']);
         return;
       }
 
-      const move = game.move(cmd);
+      // Try to make the move
+      const move = game.move(cmdOriginal);
       if (move) {
         updateBoardState();
         ws?.send(JSON.stringify({ 
           type: 'move', 
-          move: cmd,
+          move: cmdOriginal,
           fen: game.fen()
         }));
         
-        setHistory(prev => [...prev, `Move ${cmd} played successfully.`]);
+        setHistory(prev => [...prev, `Move ${cmdOriginal} played successfully.`]);
         setHistory(prev => [...prev, 'Waiting for Bobby\'s move...']);
 
         // Request Bobby's response move
@@ -147,7 +149,13 @@ export function ChessUI() {
           fen: game.fen()
         }));
       } else {
-        setHistory(prev => [...prev, 'Invalid move. The move is not legal in the current position.']);
+        // Provide more specific error message for illegal moves
+        const possibleMoves = game.moves();
+        setHistory(prev => [
+          ...prev, 
+          'Invalid move. The move is not legal in the current position.',
+          `Legal moves: ${possibleMoves.join(', ')}`
+        ]);
       }
     } catch (error) {
       setHistory(prev => [...prev, `Error: ${error instanceof Error ? error.message : 'Invalid move'}. Please try again.`]);
@@ -181,7 +189,14 @@ export function ChessUI() {
       </div>
       
       <div className="space-y-2">
-        <div className="h-48 overflow-y-auto p-2 rounded-lg border bg-background/95">
+        <div 
+          className="h-48 overflow-y-auto p-2 rounded-lg border bg-background/95"
+          ref={(el) => {
+            if (el) {
+              el.scrollTop = el.scrollHeight;
+            }
+          }}
+        >
           {history.map((entry, i) => (
             <div key={i} className="text-sm">{entry}</div>
           ))}

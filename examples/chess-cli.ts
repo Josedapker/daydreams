@@ -16,6 +16,7 @@ import {
 import { RoomManager } from "../packages/core/src/core/room-manager";
 import { LogLevel } from "../packages/core/src/core/types";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
+import { WebSocket, WebSocketServer } from 'ws';
 
 // Initialize LLM first since it's used by other components
 const llm = new LLMClient({
@@ -83,6 +84,117 @@ if (!chessHandler || !chessHandler.execute) {
 // Create a typed handler to avoid repeated checks
 const handler = chessHandler.execute.bind(chessHandler);
 
+const wss = new WebSocketServer({ port: 3000 });
+
+wss.on('connection', (ws) => {
+    console.log('Client connected');
+    let currentGame: GameState;
+
+    const initGame = async () => {
+        currentGame = await handler({
+            command: "new",
+            gameId: "game1"
+        }) as GameState;
+        return currentGame;
+    };
+
+    initGame().catch(console.error);
+
+    ws.on('message', async (message) => {
+        try {
+            const data = JSON.parse(message.toString());
+
+            if (data.type === 'move') {
+                try {
+                    const result = await handler({
+                        command: "move",
+                        gameId: "game1",
+                        move: data.move,
+                        fen: data.fen
+                    });
+
+                    currentGame = result as GameState;
+
+                    if (currentGame.status !== 'ongoing') {
+                        ws.send(JSON.stringify({
+                            type: 'game_over',
+                            status: currentGame.status
+                        }));
+                        return;
+                    }
+
+                    // Get Bobby's analysis and move
+                    const analysis = await bobby.process({
+                        command: "analyze",
+                        gameId: "game1",
+                        fen: currentGame.fen
+                    }, "");
+
+                    const bobbyMove = analysis.metadata.recommendedMove;
+                    if (bobbyMove) {
+                        const result = await handler({
+                            command: "move",
+                            gameId: "game1",
+                            move: bobbyMove,
+                            fen: currentGame.fen
+                        });
+
+                        currentGame = result as GameState;
+                        ws.send(JSON.stringify({
+                            type: 'move',
+                            move: bobbyMove,
+                            fen: currentGame.fen
+                        }));
+                    }
+                } catch (error) {
+                    ws.send(JSON.stringify({
+                        type: 'error',
+                        message: error instanceof Error ? error.message : 'Invalid move'
+                    }));
+                }
+            } else if (data.type === 'chat') {
+                const response = await bobby.process({
+                    command: "chat",
+                    gameId: "game1",
+                    fen: currentGame.fen,
+                    question: "What do you think about the current position?"
+                }, "");
+
+                ws.send(JSON.stringify({
+                    type: 'message',
+                    message: response.content
+                }));
+            } else if (data.type === 'analyze') {
+                const analysis = await bobby.process({
+                    command: "analyze",
+                    gameId: "game1",
+                    fen: data.position
+                }, "");
+
+                ws.send(JSON.stringify({
+                    type: 'message',
+                    message: analysis.content
+                }));
+            }
+        } catch (error) {
+            console.error('Error processing message:', error);
+            ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Internal server error'
+            }));
+        }
+    });
+
+    ws.on('close', () => {
+        console.log('Client disconnected');
+    });
+});
+
+console.log('WebSocket server started on port 3000');
+
+// Comment out the original game loop since we're using WebSocket now
+// async function playChess() { ... }
+
 async function playChess() {
     const rl = createInterface({
         input: process.stdin,
@@ -113,13 +225,13 @@ async function playChess() {
             // White pieces (uppercase in FEN)
             'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚', 'P': '♟'
         };
-        
+
         const [position, turn] = fen.split(' ');
         const rows = position.split('/');
-        
+
         board.push('   a b c d e f g h');
         board.push('  ─────────────────');
-        
+
         rows.forEach((row, i) => {
             let line = `${8 - i} │`;
             for (const char of row) {
@@ -134,7 +246,7 @@ async function playChess() {
 
         board.push('');
         board.push(`  ${turn === 'w' ? 'White' : 'Black'} to move`);
-        
+
         return board.join('\n');
     }
 
@@ -157,19 +269,19 @@ async function playChess() {
         });
 
         if (input.toLowerCase() === 'quit') break;
-        
+
         if (input.toLowerCase() === 'chat') {
             const question = await new Promise<string>(resolve => {
                 rl.question("\nAsk Bobby something about the position: ", resolve);
             });
-            
+
             const response = await bobby.process({
                 command: "chat",
                 gameId,
                 fen: game.fen,
                 question
             }, "");
-            
+
             console.log("\nBobby says:", response.content);
             continue;
         }
@@ -180,7 +292,7 @@ async function playChess() {
                 gameId,
                 fen: game.fen
             }, "");
-            
+
             console.log("\nBobby's Analysis:", analysis.content);
             continue;
         }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Chess } from 'chess.js';
+import './chess-ui.css';
 
 type Square = 'a1' | 'a2' | 'a3' | 'a4' | 'a5' | 'a6' | 'a7' | 'a8' |
              'b1' | 'b2' | 'b3' | 'b4' | 'b5' | 'b6' | 'b7' | 'b8' |
@@ -19,6 +20,19 @@ const PIECE_SYMBOLS: Record<string, string> = {
   'wk': '♔', 'wq': '♕', 'wr': '♖', 'wb': '♗', 'wn': '♘', 'wp': '♙',
   'bk': '♚', 'bq': '♛', 'br': '♜', 'bb': '♝', 'bn': '♞', 'bp': '♟'
 };
+
+const ChessSquare = ({ piece, isWhiteSquare, onClick }: { piece: Piece | null, isWhiteSquare: boolean, onClick: () => void }) => (
+  <div
+    className={`chess-square ${isWhiteSquare ? 'white' : 'black'}`}
+    onClick={onClick}
+  >
+    {piece && (
+      <span className={`chess-piece ${piece.color === 'w' ? 'white' : 'black'}`}>
+        {PIECE_SYMBOLS[`${piece.color}${piece.type}`]}
+      </span>
+    )}
+  </div>
+);
 
 export function ChessUI() {
   const [game] = useState(new Chess());
@@ -118,7 +132,7 @@ export function ChessUI() {
                 return (
                   <div
                     key={`${i}-${j}`}
-                    className={`aspect-square flex items-center justify-center text-3xl
+                    className={`aspect-square flex items-center justify-center text-5xl
                       ${isLight ? 'bg-neutral-200' : 'bg-neutral-400'}`}
                   >
                     {piece && PIECE_SYMBOLS[piece.color + piece.type]}
@@ -131,7 +145,7 @@ export function ChessUI() {
       </div>
       
       <div className="space-y-2">
-        <div className="h-32 overflow-y-auto p-2 rounded-lg border bg-background/95">
+        <div className="h-48 overflow-y-auto p-2 rounded-lg border bg-background/95">
           {history.map((entry, i) => (
             <div key={i} className="text-sm">{entry}</div>
           ))}

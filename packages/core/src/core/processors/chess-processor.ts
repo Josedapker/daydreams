@@ -29,20 +29,39 @@ export class ChessProcessor extends BaseProcessor {
     }
 
     canHandle(content: any): boolean {
-        return content.command && ['new', 'move', 'analyze'].includes(content.command);
-    }
-
-    private getGameStatus(game: Chess): string {
-        if (game.isCheckmate()) return "checkmate";
-        if (game.isDraw()) return "draw";
-        if (game.isStalemate()) return "stalemate";
-        if (game.isCheck()) return "check";
-        return "ongoing";
+        return content.command && ['new', 'move', 'analyze', 'chat'].includes(content.command);
     }
 
     async process(content: any, otherContext: string): Promise<ProcessedResult> {
-        if (content.command !== 'analyze') {
+        if (!['analyze', 'chat'].includes(content.command)) {
             throw new Error('Invalid command for ChessProcessor');
+        }
+
+        const chess = new Chess(content.fen);
+        
+        if (content.command === 'chat') {
+            const prompt = `
+Current chess position:
+FEN: ${content.fen}
+Question: ${content.question}
+
+As Bobby Fischer, please provide your thoughts on this specific question, considering:
+1. The current position
+2. Concrete tactical and strategic considerations
+3. Your experience and chess principles
+`;
+            const response = await this.llmClient.complete(prompt);
+            return {
+                content: response.text,
+                metadata: {},
+                enrichedContext: {
+                    timeContext: new Date().toISOString(),
+                    summary: "Chess conversation with Bobby Fischer",
+                    topics: ["chess", "conversation"],
+                    relatedMemories: []
+                },
+                suggestedOutputs: []
+            };
         }
 
         const game = new Chess(content.fen);

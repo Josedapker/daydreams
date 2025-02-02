@@ -108,34 +108,39 @@ async function playChess() {
         const board = [];
         const pieces: { [key: string]: string } = {
             // Black pieces (lowercase in FEN)
-            'r': '♖', 'n': '♘', 'b': '♗', 'q': '♕', 'k': '♔', 'p': '♙',
+            'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
             // White pieces (uppercase in FEN)
-            'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚', 'P': '♟'
+            'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'
         };
-
+    
         const [position, turn] = fen.split(' ');
         const rows = position.split('/');
-
-        board.push('   a b c d e f g h');
-        board.push('  ─────────────────');
-
-        // Display rows from 8 to 1 (black at top, white at bottom)
+    
+        board.push('     a   b   c   d   e   f   g   h  ');
+        board.push('   ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗');
+    
         rows.forEach((row, i) => {
-            let line = `${8 - i} │`;
+            let line = ` ${8 - i} ║`;
             for (const char of row) {
                 if (isNaN(Number(char))) {
-                    line += ` ${pieces[char]}`;
+                    line += ` ${pieces[char]} │`;
                 } else {
-                    line += ' ·'.repeat(Number(char));
+                    line += ' · │'.repeat(Number(char));
                 }
             }
+            // Remove the last separator and add the right border
+            line = line.slice(0, -1) + '║';
             board.push(line);
+            
+            if (i < 7) {
+                board.push('   ╟───┼───┼───┼───┼───┼───┼───┼───╢');
+            }
         });
-
-        // Add turn indicator
+    
+        board.push('   ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝');
         board.push('');
-        board.push(`  ${turn === 'w' ? 'White' : 'Black'} to move`);
-
+        board.push(`     ${turn === 'w' ? 'White' : 'Black'} to move`);
+    
         return board.join('\n');
     }
 

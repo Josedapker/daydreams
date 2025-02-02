@@ -45,18 +45,29 @@ export function ChessUI() {
     const websocket = new WebSocket('ws://localhost:3000');
     
     websocket.onopen = () => {
-      console.log('Connected to game server');
+      console.log('🌟 Connected to game server');
     };
 
     websocket.onmessage = (event) => {
+      console.log('📥 Received message from server:', event.data);
       const data = JSON.parse(event.data);
       if (data.type === 'move') {
+        console.log('🎮 Bobby is making move:', data.move);
         game.move(data.move);
         updateBoardState();
         setHistory(prev => [...prev, `Bobby played ${data.move}`]);
       } else if (data.type === 'message') {
+        console.log('💬 Bobby sent message:', data.message);
         setHistory(prev => [...prev, `Bobby: ${data.message}`]);
       }
+    };
+
+    websocket.onerror = (error) => {
+      console.error('🔴 WebSocket error:', error);
+    };
+
+    websocket.onclose = () => {
+      console.log('🔌 Disconnected from game server');
     };
 
     setWs(websocket);
@@ -96,28 +107,59 @@ export function ChessUI() {
     setCommand('');
 
     if (cmd === 'quit') {
+      console.log('🛑 Game ended by player');
       setHistory(prev => [...prev, 'Game ended.']);
       return;
     }
 
     if (cmd === 'chat') {
+      console.log('💬 Sending chat request to Bobby');
       ws?.send(JSON.stringify({ type: 'chat' }));
       return;
     }
 
     if (cmd === 'analyze') {
+      console.log('🔍 Requesting position analysis from Bobby');
       ws?.send(JSON.stringify({ type: 'analyze', position: game.fen() }));
       return;
     }
 
     try {
+      // Validate move format
+      const movePattern = /^([NBRQK])?([a-h])?([1-8])?x?([a-h][1-8])(=[NBRQ])?[+#]?$/;
+      if (!movePattern.test(cmd) && !cmd.toLowerCase().includes('o-o')) {
+        console.log('❌ Invalid move format:', cmd);
+        setHistory(prev => [...prev, 'Invalid move format. Please use standard algebraic notation (e.g., e4, Nf3, O-O).']);
+        return;
+      }
+
       const move = game.move(cmd);
       if (move) {
+        console.log('✅ Player move successful:', cmd);
         updateBoardState();
-        ws?.send(JSON.stringify({ type: 'move', move: cmd }));
+        ws?.send(JSON.stringify({ 
+          type: 'move', 
+          move: cmd,
+          fen: game.fen()
+        }));
+        console.log('📤 Sent move to server:', cmd);
+        
+        setHistory(prev => [...prev, `Move ${cmd} played successfully.`]);
+        setHistory(prev => [...prev, 'Waiting for Bobby\'s move...']);
+
+        // Request Bobby's response move
+        console.log('🤔 Requesting Bobby\'s move...');
+        ws?.send(JSON.stringify({
+          type: 'request_move',
+          fen: game.fen()
+        }));
+      } else {
+        console.log('❌ Invalid move (not legal):', cmd);
+        setHistory(prev => [...prev, 'Invalid move. The move is not legal in the current position.']);
       }
     } catch (error) {
-      setHistory(prev => [...prev, 'Invalid move. Please try again.']);
+      console.error('🔴 Error processing move:', error);
+      setHistory(prev => [...prev, `Error: ${error instanceof Error ? error.message : 'Invalid move'}. Please try again.`]);
     }
   };
 

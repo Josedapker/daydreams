@@ -18,9 +18,16 @@ import { Route as ChatsChatIdImport } from './routes/chats/$chatId'
 
 // Create Virtual Routes
 
+const ChessLazyImport = createFileRoute('/chess')()
 const IndexLazyImport = createFileRoute('/')()
 
 // Create/Update Routes
+
+const ChessLazyRoute = ChessLazyImport.update({
+  id: '/chess',
+  path: '/chess',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/chess.lazy').then((d) => d.Route))
 
 const IndexLazyRoute = IndexLazyImport.update({
   id: '/',
@@ -51,6 +58,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexLazyImport
       parentRoute: typeof rootRoute
     }
+    '/chess': {
+      id: '/chess'
+      path: '/chess'
+      fullPath: '/chess'
+      preLoaderRoute: typeof ChessLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/chats/$chatId': {
       id: '/chats/$chatId'
       path: '/chats/$chatId'
@@ -72,12 +86,14 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
+  '/chess': typeof ChessLazyRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
   '/chats': typeof ChatsIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
+  '/chess': typeof ChessLazyRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
   '/chats': typeof ChatsIndexRoute
 }
@@ -85,27 +101,30 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexLazyRoute
+  '/chess': typeof ChessLazyRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
   '/chats/': typeof ChatsIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chats/$chatId' | '/chats'
+  fullPaths: '/' | '/chess' | '/chats/$chatId' | '/chats'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chats/$chatId' | '/chats'
-  id: '__root__' | '/' | '/chats/$chatId' | '/chats/'
+  to: '/' | '/chess' | '/chats/$chatId' | '/chats'
+  id: '__root__' | '/' | '/chess' | '/chats/$chatId' | '/chats/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
+  ChessLazyRoute: typeof ChessLazyRoute
   ChatsChatIdRoute: typeof ChatsChatIdRoute
   ChatsIndexRoute: typeof ChatsIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
+  ChessLazyRoute: ChessLazyRoute,
   ChatsChatIdRoute: ChatsChatIdRoute,
   ChatsIndexRoute: ChatsIndexRoute,
 }
@@ -121,12 +140,16 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/chess",
         "/chats/$chatId",
         "/chats/"
       ]
     },
     "/": {
       "filePath": "index.lazy.tsx"
+    },
+    "/chess": {
+      "filePath": "chess.lazy.tsx"
     },
     "/chats/$chatId": {
       "filePath": "chats/$chatId.tsx"

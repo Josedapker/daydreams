@@ -156,24 +156,27 @@ export function ChessUI() {
 
   return (
     <div className="flex flex-col h-full p-4 gap-4">
-      <div className="flex-1 bg-background/95 p-4 rounded-lg border">
-        <div className="aspect-square w-full max-w-[600px] mx-auto bg-neutral-100 rounded-lg border overflow-hidden">
-          <div className="grid grid-cols-8 grid-rows-8 h-full w-full">
-            {boardState.map((row, i) => (
-              row.map((piece, j) => {
-                const isLight = (i + j) % 2 === 0;
-                return (
-                  <div
-                    key={`${i}-${j}`}
-                    className={`aspect-square flex items-center justify-center text-5xl
-                      ${isLight ? 'bg-neutral-200' : 'bg-neutral-400'}`}
-                  >
-                    {piece && PIECE_SYMBOLS[piece.color + piece.type]}
-                  </div>
-                );
-              })
-            ))}
-          </div>
+      <div className="flex-1 bg-background/95 p-4 rounded-lg border shadow-lg">
+        <div className="chess-board">
+          {/* Chess squares with pieces */}
+          {boardState.map((row, i) => (
+            row.map((piece, j) => {
+              const isLight = (i + j) % 2 === 0;
+              const file = String.fromCharCode(97 + j);
+              const rank = 8 - i;
+              return (
+                <div
+                  key={`${i}-${j}`}
+                  className={`chess-square ${isLight ? 'white' : 'black'}`}
+                  data-square={`${file}${rank}`}
+                  data-file={file}
+                  data-rank={rank}
+                >
+                  {piece && PIECE_SYMBOLS[piece.color + piece.type]}
+                </div>
+              );
+            })
+          ))}
         </div>
       </div>
       

@@ -221,29 +221,34 @@ async function playChess() {
         const board: string[] = [];
         const pieces: Record<string, string> = {
             // Black pieces (lowercase in FEN)
-            'r': '♖', 'n': '♘', 'b': '♗', 'q': '♕', 'k': '♔', 'p': '♙',
+            'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
             // White pieces (uppercase in FEN)
-            'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚', 'P': '♟'
+            'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'
         };
 
         const [position, turn] = fen.split(' ');
         const rows = position.split('/');
 
-        board.push('   a b c d e f g h');
-        board.push('  ─────────────────');
+        // Add top border
+        board.push('  ┌─────────────────┐');
 
+        // Add board rows with rank numbers on the left
         rows.forEach((row, i) => {
             let line = `${8 - i} │`;
             for (const char of row) {
                 if (isNaN(Number(char))) {
-                    line += ` ${pieces[char] || char}`;  // Fallback for unknown pieces
+                    line += ` ${pieces[char] || char}`;
                 } else {
                     line += ' ·'.repeat(Number(char));
                 }
             }
+            line += ` │`;
             board.push(line);
         });
 
+        // Add bottom border and file letters
+        board.push('  └─────────────────┘');
+        board.push('    a b c d e f g h');
         board.push('');
         board.push(`  ${turn === 'w' ? 'White' : 'Black'} to move`);
 

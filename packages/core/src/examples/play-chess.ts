@@ -2,7 +2,7 @@ import { Chess } from "chess.js";
 import { createInterface } from "readline";
 
 import { ChainOfThought } from "../core/chain-of-thought";
-import { defaultCharacter } from "../core/character_bobby_fischer";
+import { defaultCharacter } from "../core/characters/character_bobby_fischer";
 import { chessHandler } from "../core/io/chess";  // Add this back
 import { LLMClient } from "../core/llm-client";
 import { ChessProcessor } from "../core/processors/chess-processor";
@@ -43,21 +43,21 @@ const bobby = new ChessProcessor(llm, defaultCharacter, LogLevel.DEBUG);
 function evaluatePosition(fen: string): string {
     const chess = new Chess(fen);
     let evaluation = "";
-    
+
     const pieces = chess.board().flat().filter((piece): piece is NonNullable<ReturnType<Chess['board']>[number][number]> => piece !== null);
     const materialCount = pieces.reduce((acc: number, piece) => {
         const values: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 };
         const value = values[piece.type.toLowerCase()] || 0;
         return acc + (piece.color === 'w' ? value : -value);
     }, 0);
-    
+
     evaluation += `\nMaterial: ${materialCount >= 0 ? '+' : ''}${materialCount}`;
-    
+
     const threats = chess.moves({ verbose: true }).filter((move) => move.flags.includes('c'));
     if (threats.length > 0) {
         evaluation += `\nThreats: ${threats.map(t => `${t.piece.toUpperCase()}x${t.to}`).join(', ')}`;
     }
-    
+
     return evaluation;
 }
 
@@ -112,13 +112,13 @@ async function playChess() {
             // White pieces (uppercase in FEN)
             'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'
         };
-    
+
         const [position, turn] = fen.split(' ');
         const rows = position.split('/');
-    
+
         board.push('     a   b   c   d   e   f   g   h  ');
         board.push('   ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗');
-    
+
         rows.forEach((row, i) => {
             let line = ` ${8 - i} ║`;
             for (const char of row) {
@@ -131,16 +131,16 @@ async function playChess() {
             // Remove the last separator and add the right border
             line = line.slice(0, -1) + '║';
             board.push(line);
-            
+
             if (i < 7) {
                 board.push('   ╟───┼───┼───┼───┼───┼───┼───┼───╢');
             }
         });
-    
+
         board.push('   ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝');
         board.push('');
         board.push(`     ${turn === 'w' ? 'White' : 'Black'} to move`);
-    
+
         return board.join('\n');
     }
 
@@ -170,7 +170,7 @@ async function playChess() {
         if (input.toLowerCase() === 'analyze') {
             const chess = new Chess(game.fen);
             const threats = chess.moves({ verbose: true }).filter((move) => move.flags.includes('c'));
-            
+
             // Create a more structured prompt
             const prompt = `
 Current chess position analysis:
@@ -206,14 +206,14 @@ Please analyze this position focusing on:
             const question = await new Promise<string>(resolve => {
                 rl.question("\nWhat would you like to ask Bobby? ", resolve);
             });
-            
+
             const response = await bobby.process({
                 command: "chat",
                 gameId,
                 fen: game.fen,
                 question
             }, "");
-            
+
             console.log("\nBobby says:", response.content);
             continue;
         }

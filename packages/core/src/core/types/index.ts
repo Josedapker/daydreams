@@ -1,7 +1,11 @@
+import type {
+    FilePart,
+    ImagePart,
+} from "ai";
 import type { z } from "zod";
+
 import type { LLMClient } from "../../core/llm-client";
 import type { Logger } from "../../core/logger";
-import type { FilePart, ImagePart } from "ai";
 
 /**
  * ChainOfThoughtContext can hold any relevant data
@@ -270,14 +274,37 @@ export interface CharacterInstructions {
 export interface Character {
     name: string;
     bio: string;
-    traits: CharacterTrait[];
-    voice: CharacterVoice;
-    instructions: CharacterInstructions;
-    // Optional custom prompt templates
-    templates?: {
-        tweetTemplate?: string;
-        replyTemplate?: string;
-        thoughtTemplate?: string;
+    traits: Array<{
+        name: string;
+        description: string;
+        strength: number;
+        examples: string[];
+    }>;
+    voice: {
+        tone: string;
+        style: string;
+        vocabulary: string[];
+        commonPhrases?: string[];
+        emojis: string[];
+    };
+    instructions: {
+        goals: string[];
+        constraints?: string[];
+        contextRules?: string[];
+        topics: string[];
+        responseStyle: string[];
+    };
+    templates?: Record<string, string>;
+    chessStyle?: {
+        openings: string[];
+        preferences: {
+            pawnStructure: number;
+            pieceActivity: number;
+            kingAttack: number;
+            centerControl: number;
+        };
+        favoritePatterns: string[];
+        criticalPositionTypes: string[];
     };
 }
 

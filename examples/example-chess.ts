@@ -3,15 +3,20 @@ import { WebSocketServer } from "ws";
 
 import {
     defaultCharacter,
-} from "../packages/core/src/core/character_bobby_fischer";
+} from "../packages/core/src/core/characters/character_bobby_fischer";
+import {
+    ConversationManager,
+} from "../packages/core/src/core/conversation-manager"; // Replace RoomManager import
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
 import { chessHandler } from "../packages/core/src/core/io/chess";
+import {
+    makeFlowLifecycle,
+} from "../packages/core/src/core/life-cycle"; // Add this import
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import {
     ChessProcessor,
 } from "../packages/core/src/core/processors/chess-processor";
-import { RoomManager } from "../packages/core/src/core/room-manager";
 import { LogLevel } from "../packages/core/src/core/types";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 
@@ -25,7 +30,7 @@ async function main() {
     });
 
     await vectorDb.purge(); // Clear previous session data
-    const roomManager = new RoomManager(vectorDb);
+    const conversationManager = new ConversationManager(vectorDb); // Replace RoomManager
 
     const llmClient = new LLMClient({
         model: "anthropic/claude-3-opus-20240229",
@@ -49,18 +54,28 @@ async function main() {
     await scheduledTaskDb.connect();
     console.log(chalk.green("✅ Game state database connected"));
 
-    // Initialize core system
+    // Initialize core system with correct arguments
+    // Update Orchestrator initialization
     const orchestrator = new Orchestrator(
-        roomManager,
-        vectorDb,
         chessProcessor,
-        scheduledTaskDb,
+        makeFlowLifecycle(scheduledTaskDb, conversationManager), // Update to use conversationManager
         {
             level: loglevel,
             enableColors: true,
-            enableTimestamp: true,
+            enableTimestamp: true
         }
     );
+
+    // Update room creation to use conversation
+    const gameId = "game1";
+    const conversation = await conversationManager.createConversation("chess", gameId, {
+        name: "Chess Game vs Bobby Fischer",
+        description: "Interactive chess game against Bobby Fischer AI",
+        metadata: {
+            startTime: new Date(),
+            playerColor: "white"
+        }
+    });
 
     // Register the chess game handler
     // Update the handler registration
@@ -72,15 +87,13 @@ async function main() {
 
     wss.on("connection", (ws) => {
         console.log(chalk.blue("🎮 New player connected"));
-        
+
         ws.on("message", async (data) => {
             try {
                 const message = JSON.parse(data.toString());
                 const result = await orchestrator.dispatchToInput(
                     "chess_game",
-                    message,
-                    `Game session ${message.gameId}`,
-                    undefined // Changed from {} to undefined for the optional parameter
+                    message
                 );
                 ws.send(JSON.stringify(result));
             } catch (error) {
